@@ -48,7 +48,7 @@ export default function RescuePage() {
               medicalTraining: true,
               rescueTrainingLevel: 'INTERMEDIATE',
               vehicleAvailable: true,
-              vehicleType: '4X4_RESCUE_VEHICLE',
+              vehicleType: 'SUV',
               maxRescueCapacity: 5
             })
           });
