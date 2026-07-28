@@ -32,8 +32,39 @@ export default function RescuePage() {
       const API = 'https://cgapi.shyxon.com/api/v1';
       const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 
-      if (!volunteers || volunteers.length === 0) {
-        alert("No volunteers found in database. Cannot simulate assignment.");
+      let currentVolunteers = volunteers || [];
+
+      if (currentVolunteers.length === 0) {
+        // Auto-register a mock volunteer for simulation purposes
+        try {
+          const volRes = await fetch(`${API}/volunteers`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              name: 'Mock Volunteer ' + Math.floor(Math.random() * 100),
+              phoneNumber: '+886-900-' + Math.floor(100000 + Math.random() * 900000),
+              latitude: 25.0450,
+              longitude: 121.5750,
+              medicalTraining: true,
+              rescueTrainingLevel: 'INTERMEDIATE',
+              vehicleAvailable: true,
+              vehicleType: '4X4_RESCUE_VEHICLE',
+              maxRescueCapacity: 5
+            })
+          });
+          if (volRes.ok) {
+            const volData = await volRes.json();
+            if (volData?.data) {
+              currentVolunteers = [volData.data];
+            }
+          }
+        } catch (e) {
+          console.error("Failed to auto-register volunteer", e);
+        }
+      }
+
+      if (currentVolunteers.length === 0) {
+        alert("Failed to auto-register a mock volunteer. Please register a volunteer via the Mobile App first.");
         setIsSimulating(false);
         return;
       }
@@ -57,7 +88,7 @@ export default function RescuePage() {
 
       if (sosId) {
         await Promise.allSettled(
-          volunteers.map((vol: any) =>
+          currentVolunteers.map((vol: any) =>
             fetch(`${API}/rescue/assign`, {
               method: 'POST',
               headers,
@@ -67,7 +98,7 @@ export default function RescuePage() {
         );
       }
       
-      alert(`Simulated Emergency created and assigned to ${volunteers.length} volunteer(s) successfully!`);
+      alert(`Simulated Emergency created and assigned to ${currentVolunteers.length} volunteer(s) successfully!`);
       refetchRescue();
     } catch (e: any) {
       alert("Simulation failed: " + e.message);
