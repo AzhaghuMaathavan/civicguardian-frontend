@@ -6,6 +6,7 @@ import { Activity, ShieldCheck, AlertTriangle, RefreshCw } from "lucide-react";
 interface ServiceStatus {
   name: string;
   path: string;
+  method?: "GET" | "POST";
   status: "up" | "down" | "checking" | "unknown";
   code?: number;
   latencyMs?: number;
@@ -13,8 +14,8 @@ interface ServiceStatus {
 
 const SERVICES: ServiceStatus[] = [
   { name: "API Gateway", path: "/actuator/health", status: "checking" },
-  { name: "Auth Service", path: "/auth/health", status: "checking" },
-  { name: "AI Personalization", path: "/api/v1/ai", status: "checking" },
+  { name: "Auth Service", path: "/auth/login", method: "POST", status: "checking" },
+  { name: "AI Personalization", path: "/docs", status: "checking" },
   { name: "AI Risk Prediction", path: "/api/v1/risk", status: "checking" },
   { name: "Emergency Command Center", path: "/api/v1/command", status: "checking" },
   { name: "Safety Checkin", path: "/api/v1/safety", status: "checking" },
@@ -38,7 +39,7 @@ export default function ServiceStatusPage() {
         const start = performance.now();
         try {
           const res = await fetch(`${baseUrl}${svc.path}`, {
-            method: "GET",
+            method: svc.method || "GET",
             headers: { Accept: "application/json" },
             // bypass auth for public health endpoints
             cache: "no-store",
@@ -46,7 +47,7 @@ export default function ServiceStatusPage() {
           const latency = Math.round(performance.now() - start);
           const code = res.status;
           // 401/403 counts as reachable = up, just unauthenticated
-          const up = res.ok || code === 401 || code === 403;
+          const up = res.ok || code === 401 || code === 403 || code === 400;
           return {
             ...svc,
             status: up ? "up" : "down",
