@@ -13,9 +13,11 @@ export const rescueApi = api.injectEndpoints({
           list = response.content;
         } else if (response && Array.isArray(response.data)) {
           list = response.data;
+        } else if (response && response.data && Array.isArray(response.data.content)) {
+          list = response.data.content;
         }
         if (!list || list.length === 0) return [];
-        return list.map((item: any) => ({
+        return list.filter((item: any) => item != null).map((item: any) => ({
           ...item,
           id: String(item.id || item.volunteerId || ''),
           name: item.name || item.fullName || '',
@@ -35,9 +37,11 @@ export const rescueApi = api.injectEndpoints({
           list = response.content;
         } else if (response && Array.isArray(response.data)) {
           list = response.data;
+        } else if (response && response.data && Array.isArray(response.data.content)) {
+          list = response.data.content;
         }
         if (!list || list.length === 0) return [];
-        return list.map((item: any) => ({
+        return list.filter((item: any) => item != null).map((item: any) => ({
           ...item,
           id: String(item.id || item.sosRequestId || ''),
           title: item.description || item.disasterType || '',
