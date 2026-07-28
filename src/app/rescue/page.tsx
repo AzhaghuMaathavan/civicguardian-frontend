@@ -23,6 +23,55 @@ export default function RescuePage() {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [statusUpdateTask, setStatusUpdateTask] = useState<any>(null);
   const [newStatus, setNewStatus] = useState('');
+  const [isSimulating, setIsSimulating] = useState(false);
+
+  const handleSimulate = async () => {
+    setIsSimulating(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const API = 'https://cgapi.shyxon.com/api/v1';
+      const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+
+      const volRes = await fetch(`${API}/volunteers?size=1`, { headers });
+      const volData = await volRes.json();
+      const volunteerId = volData?.data?.content?.[0]?.id || volData?.data?.[0]?.id || volData?.data?.content?.[0]?.volunteerId;
+      
+      if (!volunteerId) {
+        alert("No volunteers found in database. Cannot simulate assignment.");
+        setIsSimulating(false);
+        return;
+      }
+
+      const sosRes = await fetch(`${API}/sos`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          citizenId: 'MOCK-CITIZEN-002',
+          citizenName: 'Jane Smith',
+          contactNumber: '+19876543211',
+          latitude: 25.0450,
+          longitude: 121.5750,
+          disasterType: 'FIRE',
+          emergencyPriority: 'HIGH',
+          description: 'Simulated Web Emergency'
+        })
+      });
+      const sosData = await sosRes.json();
+      const sosId = sosData?.data?.id;
+
+      await fetch(`${API}/rescue/assign`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ sosRequestId: sosId, volunteerId })
+      });
+      
+      alert("Simulated Emergency created and assigned successfully!");
+      refetchRescue();
+    } catch (e: any) {
+      alert("Simulation failed: " + e.message);
+    }
+    setIsSimulating(false);
+  };
 
   const handleCreateTask = async () => {
     if (!selectedSos) return;
@@ -90,8 +139,8 @@ export default function RescuePage() {
           <p className="text-gray-500 mt-1">Live tracking of ongoing emergency responses and predictive risks.</p>
         </div>
         <div className="flex gap-3">
-          <Button onClick={() => alert("To test live SOS, press the SOS button in your Expo Go Mobile App. The alert will appear here instantly.")} variant="secondary" className="flex items-center gap-2 border-red-200 text-red-600 hover:bg-red-50">
-            <AlertTriangle size={18} /> Simulate SOS
+          <Button onClick={handleSimulate} disabled={isSimulating} variant="secondary" className="flex items-center gap-2 border-red-200 text-red-600 hover:bg-red-50">
+            <AlertTriangle size={18} /> {isSimulating ? "Simulating..." : "Simulate SOS"}
           </Button>
           <Button onClick={() => setIsTaskModalOpen(true)} className="flex items-center gap-2">
             <LifeBuoy size={18} /> New Rescue Task
