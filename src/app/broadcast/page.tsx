@@ -52,7 +52,7 @@ export default function BroadcastAlertPage() {
     };
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/v1/ingestion/alerts`, {
+      const response = await fetch("https://cgapi.shyxon.com/api/v1/ingestion/alerts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

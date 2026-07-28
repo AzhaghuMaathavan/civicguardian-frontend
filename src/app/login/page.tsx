@@ -6,7 +6,7 @@ import { setCredentials } from "@/store/authSlice";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/auth`;
+const API_URL = "https://cgapi.shyxon.com/auth";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
