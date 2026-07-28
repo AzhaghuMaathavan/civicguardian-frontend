@@ -87,18 +87,22 @@ export default function RescuePage() {
       const sosId = sosData?.data?.id;
 
       if (sosId) {
-        await Promise.allSettled(
-          currentVolunteers.map((vol: any) =>
-            fetch(`${API}/rescue/assign`, {
-              method: 'POST',
-              headers,
-              body: JSON.stringify({ sosRequestId: sosId, volunteerId: vol.id })
-            })
-          )
-        );
+        // Find 'tester' volunteer, or pick the first available if not found
+        const tester = currentVolunteers.find((v: any) => v.name?.toLowerCase() === 'tester');
+        const targetVol = tester || currentVolunteers[0];
+        
+        if (targetVol) {
+          await fetch(`${API}/rescue/assign`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ sosRequestId: sosId, volunteerId: targetVol.id })
+          });
+          alert(`Simulated Emergency created and assigned to ${targetVol.name} successfully!`);
+        } else {
+          alert(`Simulated Emergency created successfully, but no volunteers available for assignment.`);
+        }
       }
       
-      alert(`Simulated Emergency created and assigned to ${currentVolunteers.length} volunteer(s) successfully!`);
       refetchRescue();
     } catch (e: any) {
       alert("Simulation failed: " + e.message);
