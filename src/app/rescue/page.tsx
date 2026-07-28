@@ -32,9 +32,7 @@ export default function RescuePage() {
       const API = 'https://cgapi.shyxon.com/api/v1';
       const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 
-      const volRes = await fetch(`${API}/volunteers?size=1`, { headers });
-      const volData = await volRes.json();
-      const volunteerId = volData?.data?.content?.[0]?.id || volData?.data?.[0]?.id || volData?.data?.content?.[0]?.volunteerId;
+      const volunteerId = volunteers && volunteers.length > 0 ? volunteers[0].id : null;
       
       if (!volunteerId) {
         alert("No volunteers found in database. Cannot simulate assignment.");
