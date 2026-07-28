@@ -69,39 +69,40 @@ export default function RescuePage() {
         return;
       }
 
-      const sosRes = await fetch(`${API}/sos`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          citizenId: 'MOCK-CITIZEN-002',
-          citizenName: 'Jane Smith',
-          contactNumber: '+19876543211',
-          latitude: 25.0450,
-          longitude: 121.5750,
-          disasterType: 'FIRE',
-          emergencyPriority: 'HIGH',
-          description: 'Simulated Web Emergency'
-        })
-      });
-      const sosData = await sosRes.json();
-      const sosId = sosData?.data?.id;
+      await Promise.allSettled(
+        currentVolunteers.map(async (vol: any, index: number) => {
+          try {
+            const sosRes = await fetch(`${API}/sos`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                citizenId: `MOCK-CITIZEN-00${index + 2}`,
+                citizenName: `Mock Citizen ${index + 1}`,
+                contactNumber: `+886-900-${Math.floor(100000 + Math.random() * 900000)}`,
+                latitude: 25.0450 + (Math.random() * 0.02 - 0.01),
+                longitude: 121.5750 + (Math.random() * 0.02 - 0.01),
+                disasterType: 'FIRE',
+                emergencyPriority: 'HIGH',
+                description: `Simulated Emergency assigned to ${vol.name}`
+              })
+            });
+            const sosData = await sosRes.json();
+            const sosId = sosData?.data?.id;
 
-      if (sosId) {
-        // Find 'tester' volunteer, or pick the first available if not found
-        const tester = currentVolunteers.find((v: any) => v.name?.toLowerCase() === 'tester');
-        const targetVol = tester || currentVolunteers[0];
-        
-        if (targetVol) {
-          await fetch(`${API}/rescue/assign`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ sosRequestId: sosId, volunteerId: targetVol.id })
-          });
-          alert(`Simulated Emergency created and assigned to ${targetVol.name} successfully!`);
-        } else {
-          alert(`Simulated Emergency created successfully, but no volunteers available for assignment.`);
-        }
-      }
+            if (sosId) {
+              await fetch(`${API}/rescue/assign`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ sosRequestId: sosId, volunteerId: vol.id })
+              });
+            }
+          } catch (err) {
+            console.error(`Failed to simulate for volunteer ${vol.name}`, err);
+          }
+        })
+      );
+      
+      alert(`Successfully simulated ${currentVolunteers.length} emergency requests and assigned one to every volunteer!`);
       
       refetchRescue();
     } catch (e: any) {
