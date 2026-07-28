@@ -20,6 +20,9 @@ export default function RescuePage() {
   const [selectedVolunteer, setSelectedVolunteer] = useState("");
   const [priority, setPriority] = useState("HIGH");
   const [description, setDescription] = useState("");
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [statusUpdateTask, setStatusUpdateTask] = useState<any>(null);
+  const [newStatus, setNewStatus] = useState('');
 
   const handleCreateTask = async () => {
     if (!selectedSos) return;
@@ -36,6 +39,30 @@ export default function RescuePage() {
     } catch (err) {
       console.error("Failed to assign volunteer:", err);
       alert("Failed to assign volunteer. Please try again.");
+    }
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!statusUpdateTask || !newStatus) return;
+    const assignmentId = statusUpdateTask.assignments?.[0]?.id;
+    if (!assignmentId) {
+      alert('No assignment found for this task. Assign a volunteer first.');
+      return;
+    }
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const res = await fetch('https://cgapi.shyxon.com/api/v1/rescue/status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ rescueAssignmentId: assignmentId, newStatus, updatedBy: 'DASHBOARD_OPERATOR' })
+      });
+      if (!res.ok) throw new Error('Update failed');
+      setIsStatusModalOpen(false);
+      setStatusUpdateTask(null);
+      setNewStatus('');
+      refetchRescue();
+    } catch (err) {
+      alert('Failed to update status: ' + err);
     }
   };
 
@@ -156,28 +183,73 @@ export default function RescuePage() {
             {tasks.length === 0 ? (
               <p className="text-gray-500 text-center py-4">No active tasks.</p>
             ) : (
-              tasks.map((task: any) => (
-                <div key={task.id} className="bg-white p-4 rounded-xl border border-gray-200/60 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-semibold text-gray-800">{task.title}</h4>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-md ${
-                      task.priority === 'Critical' ? 'bg-red-100 text-red-700' :
-                      task.priority === 'High' ? 'bg-orange-100 text-orange-700' :
-                      'bg-blue-100 text-blue-700'
-                    }`}>
-                      {task.priority} Priority
-                    </span>
+              tasks.map((task: any) => {
+                const assignmentStatus = task.assignments?.[0]?.assignmentStatus || task.status || 'SOS_CREATED';
+                const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+                  SOS_CREATED:                { label: '🆘 New SOS',       color: 'text-red-700',    bg: 'bg-red-100' },
+                  VOLUNTEER_ASSIGNED:         { label: '👤 Assigned',      color: 'text-amber-700',  bg: 'bg-amber-100' },
+                  VOLUNTEER_ACCEPTED:         { label: '🚗 En Route',      color: 'text-blue-700',   bg: 'bg-blue-100' },
+                  VOLUNTEER_REACHED_CITIZEN:  { label: '📍 At Citizen',    color: 'text-purple-700', bg: 'bg-purple-100' },
+                  CITIZEN_RESCUED:            { label: '🚑 Transporting',  color: 'text-cyan-700',   bg: 'bg-cyan-100' },
+                  REACHED_SHELTER_HOSPITAL:   { label: '🏥 At Facility',   color: 'text-green-700',  bg: 'bg-green-100' },
+                  COMPLETED:                  { label: '✅ Complete',      color: 'text-emerald-700',bg: 'bg-emerald-100' },
+                  CANCELLED:                  { label: '❌ Cancelled',     color: 'text-gray-600',   bg: 'bg-gray-100' },
+                };
+                const sc = statusConfig[assignmentStatus] || { label: assignmentStatus, color: 'text-gray-600', bg: 'bg-gray-100' };
+                return (
+                  <div key={task.id} className="bg-white p-4 rounded-xl border border-gray-200/60 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                        <LifeBuoy size={16} className="text-blue-500" />
+                        {task.citizenName || 'Unknown Citizen'}
+                      </h4>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-md ${
+                        task.priority?.toUpperCase() === 'CRITICAL' ? 'bg-red-100 text-red-700' :
+                        task.priority?.toUpperCase() === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                        'bg-blue-100 text-blue-700'
+                      }`}>
+                        {task.priority || 'UNKNOWN'} Priority
+                      </span>
+                    </div>
+
+                    <div className="mt-2 space-y-1.5 text-sm text-gray-600">
+                      <p><span className="font-medium text-gray-700">Issue:</span> {task.title}</p>
+                      {task.medicalConditions && (
+                        <p><span className="font-medium text-gray-700">Medical:</span> {task.medicalConditions}</p>
+                      )}
+                      <p className="flex items-center gap-1">
+                        <Map size={14} className="text-gray-400" />
+                        {task.latitude?.toFixed(4)}, {task.longitude?.toFixed(4)}
+                      </p>
+                    </div>
+
+                    {task.assignments && task.assignments.length > 0 && (
+                      <div className="mt-3 p-2 bg-green-50 border border-green-100 rounded-md">
+                        <p className="text-xs font-semibold text-green-700">
+                          Volunteer: {task.assignments[0].volunteerName || task.assignments[0].volunteerId}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-100">
+                      <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${sc.bg} ${sc.color}`}>
+                        {sc.label}
+                      </span>
+                      <Button
+                        variant="secondary"
+                        className="px-3 py-1 text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
+                        onClick={() => {
+                          setStatusUpdateTask(task);
+                          setNewStatus(assignmentStatus);
+                          setIsStatusModalOpen(true);
+                        }}
+                      >
+                        Update Status
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-end mt-4">
-                    <span className={`text-sm font-medium ${
-                      task.status === 'In Progress' ? 'text-blue-600' : 'text-amber-600'
-                    }`}>
-                      {task.status}
-                    </span>
-                    <Button variant="secondary" className="px-3 py-1 text-xs h-8">Update Status</Button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -218,6 +290,38 @@ export default function RescuePage() {
           </div>
         </div>
       </div>
+
+      <Modal isOpen={isStatusModalOpen} onClose={() => setIsStatusModalOpen(false)} title={`Update Mission Status — ${statusUpdateTask?.citizenName}`}>
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">Select the new mission status:</p>
+          <div className="grid grid-cols-1 gap-2">
+            {[
+              { value: 'VOLUNTEER_ACCEPTED',       label: '🚗 En Route to Citizen' },
+              { value: 'VOLUNTEER_REACHED_CITIZEN', label: '📍 Arrived at Citizen' },
+              { value: 'CITIZEN_RESCUED',          label: '🚑 Transporting to Facility' },
+              { value: 'REACHED_SHELTER_HOSPITAL', label: '🏥 Reached Facility' },
+              { value: 'COMPLETED',               label: '✅ Mission Complete' },
+              { value: 'CANCELLED',              label: '❌ Cancel Mission' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setNewStatus(opt.value)}
+                className={`text-left px-4 py-3 rounded-lg border-2 transition-colors font-medium ${
+                  newStatus === opt.value
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <Button variant="secondary" onClick={() => setIsStatusModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdateStatus} disabled={!newStatus}>Update Status</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
