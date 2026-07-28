@@ -32,9 +32,7 @@ export default function RescuePage() {
       const API = 'https://cgapi.shyxon.com/api/v1';
       const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 
-      const volunteerId = volunteers && volunteers.length > 0 ? volunteers[0].id : null;
-      
-      if (!volunteerId) {
+      if (!volunteers || volunteers.length === 0) {
         alert("No volunteers found in database. Cannot simulate assignment.");
         setIsSimulating(false);
         return;
@@ -57,13 +55,19 @@ export default function RescuePage() {
       const sosData = await sosRes.json();
       const sosId = sosData?.data?.id;
 
-      await fetch(`${API}/rescue/assign`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ sosRequestId: sosId, volunteerId })
-      });
+      if (sosId) {
+        await Promise.allSettled(
+          volunteers.map((vol: any) =>
+            fetch(`${API}/rescue/assign`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ sosRequestId: sosId, volunteerId: vol.id })
+            })
+          )
+        );
+      }
       
-      alert("Simulated Emergency created and assigned successfully!");
+      alert(`Simulated Emergency created and assigned to ${volunteers.length} volunteer(s) successfully!`);
       refetchRescue();
     } catch (e: any) {
       alert("Simulation failed: " + e.message);
