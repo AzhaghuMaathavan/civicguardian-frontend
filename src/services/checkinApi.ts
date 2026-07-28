@@ -11,6 +11,10 @@ export const checkinApi = api.injectEndpoints({
           list = response;
         } else if (response && Array.isArray(response.content)) {
           list = response.content;
+        } else if (response && Array.isArray(response.data)) {
+          list = response.data;
+        } else if (response && response.data && Array.isArray(response.data.content)) {
+          list = response.data.content;
         }
         return list;
       },

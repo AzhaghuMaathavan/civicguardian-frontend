@@ -35,6 +35,8 @@ export const rescueApi = api.injectEndpoints({
           list = response.content;
         } else if (response && Array.isArray(response.data)) {
           list = response.data;
+        } else if (response && response.data && Array.isArray(response.data.content)) {
+          list = response.data.content;
         }
         if (!list || list.length === 0) return [];
         return list.map((item: any) => ({
